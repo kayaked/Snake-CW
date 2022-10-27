@@ -25,9 +25,12 @@ ctx.font = "25px Arial";
 for(let y = 0; y < 15; y++) {
     for(let x = 0; x < 15; x++) {
         if(cw.grid[y*15 + x] == '.') {
+            ctx.fillStyle = "#000"
             ctx.fillRect(x*40, y*40, 40, 40);
         } else {
+            ctx.fillStyle = "#000"
             ctx.strokeRect(x*40, y*40, 40, 40);
+            drawHint(x, y);
         }
     }
 }
@@ -56,25 +59,49 @@ function refTile(x, y, letters) {
             // Gets letter from crossword source and checks if given letter is correct
             // If not, letter will be red on the canvas
             let ltr = cw.grid[y*15 + x].toString();
+            ctx.font = "25px Arial";
             if(ltr != letters[1]) {
                 ctx.fillStyle = "#F00";
-                ctx.fillText(letters[1], x*40+10, y*40+40-10);
+                ctx.fillText(letters[1], x*40+10, y*40+30);
             } else {
-                ctx.fillText(ltr, x*40+10, y*40+40-10);
+                ctx.fillText(ltr, x*40+10, y*40+30);
             }
         }
+
+        // Draw the hint number on the tile
+        drawHint(x, y);
+
+        // Reset fill style
         ctx.fillStyle = "#000";
     }
 }
+
+// Draw hint number on tile in the top-left corner
+function drawHint(x, y) {
+    let num = cw.gridnums[y*15 + x];
+    if(num != 0) {
+        ctx.font = "10px Arial";
+        ctx.fillStyle = "#888";
+        ctx.fillText(num.toString(), x*40+3, y*40+10);
+    }
+}
+
+// Initialize snake
+ctx.fillStyle = "#00f";
+ctx.fillRect(5, 45, 35, 30);
+ctx.fillRect(40, 45, 40, 30);
+ctx.fillRect(80, 45, 40, 30);
+ctx.fillRect(120, 45, 35, 30);
+ctx.filleStyle = "#000";
 
 // Declare snake global variables
 // sX and sY handle the snake's coordinates
 // d is the Cardinal Direction, counterclockwise from 1(right) 2(up) 3(left) 4(down)
 // turning is a boolean handler for drawSnake determining if the snake needs to automatically move (false) or if it is being turned (true) (turning mode)
 // turnctr keeps count of each turn using a counter to identify a new turn immediately after it occurs
-var sX = -1, sY = 0;
+var sX = 3, sY = 1;
 var d = 1, to, turning = false, turnctr=0;
-var snakeskin = [[-1, 0], [0,0], [1,0], [2,0]];
+var snakeskin = [[0, 1, 1], [1,1, 1], [2,1, 1], [3,1, 1]];
 
 // drawSnake handles the canvas drawing, motion and reactions of the snake
 function drawSnake() {
@@ -87,20 +114,34 @@ function drawSnake() {
         refTile(sX, sY);
         return;
     }
+    
+    // Determine the specifications by direction for the new drawing
+    let w = 30, h = 30, xoffset = 5, yoffset = 5;
+    if(d % 2 != 0) {
+        w = 40; xoffset = 0;
+    } else {
+        h = 40; yoffset = 0;
+    }
 
     // Depending on direction, increment position
     if(d == 2) {
         if(sY == 0) sY = 15;
         sY--;
+        h = 35;
+        yoffset = 5;
     } else if(d == 3) {
         if(sX == 0) sX = 15;
         sX--;
+        w = 35;
+        xoffset = 5;
     } else if(d == 4) {
         if(sY == 14) sY = -1;
         sY++;
+        h = 35;
     } else {
         if(sX == 14) sX = -1;
         sX++;
+        w = 35;
     }
 
     // Removes the tail-end of the snake, see refTile
@@ -113,19 +154,18 @@ function drawSnake() {
     } else {
         refTile(shed[0], shed[1]);
     }
-    snakeskin.push([sX, sY]);
+    snakeskin.push([sX, sY, d]);
     ctx.fillStyle = '#00F';
-    
-    // Determine the specifications by direction for the new drawing
-    let w = 30, h = 30, xoffset = 5, yoffset = 5;
-    if(d % 2 != 0) {
-        w = 40; xoffset = 0;
-    } else {
-        h = 40; yoffset = 0;
-    }
 
     // Draw the new snake tile
     ctx.fillRect(sX*40+xoffset, sY*40+yoffset, w, h);
+
+    // Update the previous head tile to be a body segment
+    if(d % 2 == 0) {
+        ctx.fillRect(snakeskin[snakeskin.length-2][0]*40+5, snakeskin[snakeskin.length-2][1]*40, 30, 40);
+    } else {
+        ctx.fillRect(snakeskin[snakeskin.length-2][0]*40, snakeskin[snakeskin.length-2][1]*40+5, 40, 30);
+    }
 
     // Initialize the next frame of the animated snake. Only done if not in turning mode
     to = setTimeout(function(){
