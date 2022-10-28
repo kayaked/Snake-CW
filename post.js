@@ -12,9 +12,12 @@ import cw from "./21.json" assert {type: "json"};
 // Declare primary global variables
 // main is the main canvas element in the HTML document, while ctx is the canvas's drawing context used for all operations
 // marked references information about letter-marked squares using a dictionary
+// growing references whether the snake is in the process of growing
 var main = document.getElementById("main");
 var ctx = main.getContext("2d");
 var marked = {};
+var growing = false;
+var naturalTick = 180; // ms
 
 // Default canvas context preferences
 ctx.fillStyle = "#000";
@@ -64,6 +67,7 @@ function refTile(x, y, letters) {
                 ctx.fillStyle = "#F00";
                 ctx.fillText(letters[1], x*40+10, y*40+30);
             } else {
+                growing = false;
                 ctx.fillText(ltr, x*40+10, y*40+30);
             }
         }
@@ -146,13 +150,18 @@ function drawSnake() {
 
     // Removes the tail-end of the snake, see refTile
     // To-Do: Track second and second-last positions to properly update head and tail geometry
-    let shed = snakeskin.shift();
-    let tileMarked = marked[shed[1]*15 + shed[0]];
-    if(tileMarked) {
-        console.log(tileMarked.key);
-        refTile(shed[0], shed[1], [true, tileMarked.key]);
+    console.log(growing);
+    if(!growing) {
+        let shed = snakeskin.shift();
+        let tileMarked = marked[shed[1]*15 + shed[0]];
+        if(tileMarked) {
+            console.log(tileMarked.key);
+            refTile(shed[0], shed[1], [true, tileMarked.key]);
+        } else {
+            refTile(shed[0], shed[1]);
+        }
     } else {
-        refTile(shed[0], shed[1]);
+        growing = false;
     }
     snakeskin.push([sX, sY, d]);
     ctx.fillStyle = '#00F';
@@ -161,10 +170,22 @@ function drawSnake() {
     ctx.fillRect(sX*40+xoffset, sY*40+yoffset, w, h);
 
     // Update the previous head tile to be a body segment
-    if(d % 2 == 0) {
-        ctx.fillRect(snakeskin[snakeskin.length-2][0]*40+5, snakeskin[snakeskin.length-2][1]*40, 30, 40);
+    if(turning) {
+        if(d == 1) {
+            ctx.fillRect(snakeskin[snakeskin.length-2][0]*40+5, snakeskin[snakeskin.length-2][1]*40+5, 35, 30);
+        } else if(d==2) {
+            ctx.fillRect(snakeskin[snakeskin.length-2][0]*40+5, snakeskin[snakeskin.length-2][1]*40, 30, 35);
+        } else if(d==3) {
+            ctx.fillRect(snakeskin[snakeskin.length-2][0]*40, snakeskin[snakeskin.length-2][1]*40+5, 35, 30);
+        } else {
+            ctx.fillRect(snakeskin[snakeskin.length-2][0]*40+5, snakeskin[snakeskin.length-2][1]*40+5, 30, 35);
+        }
     } else {
-        ctx.fillRect(snakeskin[snakeskin.length-2][0]*40, snakeskin[snakeskin.length-2][1]*40+5, 40, 30);
+        if(d % 2 == 0) {
+            ctx.fillRect(snakeskin[snakeskin.length-2][0]*40+5, snakeskin[snakeskin.length-2][1]*40, 30, 40);
+        } else {
+            ctx.fillRect(snakeskin[snakeskin.length-2][0]*40, snakeskin[snakeskin.length-2][1]*40+5, 40, 30);
+        }
     }
 
     // Initialize the next frame of the animated snake. Only done if not in turning mode
@@ -172,7 +193,7 @@ function drawSnake() {
         if(!turning) {
             requestAnimationFrame(drawSnake);
         }
-    }, 200);
+    }, naturalTick);
 }
 
 // Global listener for a key being down in the window
@@ -201,6 +222,8 @@ window.addEventListener("keydown", function(ev) {
     } else if(ev.code.startsWith("Key")) {
         // If key pressed, mark current tile with this letter
         marked[sY*15 + sX] = {key: ev.code.charAt(3)};
+        // If the given letter is incorrect, grow the snake by 1
+        if(cw.grid[sY*15 + sX] != ev.code.charAt(3)) growing = true;
     }
     if(turning) {
         // Waits 200ms to resume the standard snake movement, but only if no more turns have been made
@@ -209,7 +232,7 @@ window.addEventListener("keydown", function(ev) {
                 turning = false;
                 requestAnimationFrame(drawSnake);
             }
-        }, 200);
+        }, naturalTick);
     }
 });
 
